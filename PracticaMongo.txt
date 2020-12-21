@@ -1,0 +1,61 @@
+/* Practica */
+
+• Obtener un listado compuesto por Provincia, Municipio y Demandantes de empleo mujer de edad mayor o igual a 45 de enero de 2007 con las siguientes consideraciones:
+    • Si es de Barcelona se mostrarán aquellas que el número de demandantes sea igual o superior a 1000
+    • Si es de Bizkaia el número de demandantes debe estar entre 10 y 7 ambos incluidos.
+
+db.Solicitudes.find(
+	{
+        'Código_mes': 200701,
+        '$or': [
+                {
+                    '$and': [
+                        {'Provincia' : 'Barcelona'},
+                        { 'Dtes_Empleo_mujer_edad_>=45' : {'$gte' : 1000 } }
+                    ]
+                },
+                {
+                    '$and': [
+                        {'Provincia' : 'Bizkaia'},
+                        { 'Dtes_Empleo_mujer_edad_>=45' : {'$gte' : 7, '$lte' : 10 } }
+                    ]
+                }
+            ]
+
+	},
+    {
+        '_id' : 0, 'Provincia' : 1, 'Municipio' : 1, 'Dtes_Empleo_mujer_edad_>=45' : 1
+    }
+).pretty()
+
+
+• Obtener una lista ordenada de mayor a menor de Provincias según el número total de demandantes de empleo según la información contenida en la base de datos. 
+  Mostrar solo aquellas con numero total de demandantes mayor de 1700000
+
+db.Solicitudes.aggregate([
+    { 
+        '$group' : { 
+            '_id' : '$Provincia',
+            'total_Dtes_Empleo_Prov' : { '$sum': '$total_Dtes_Empleo'} 
+        }
+    },
+    {'$match' : {'total_Dtes_Empleo_Prov' : {'$gt' : 1700000 } }},
+    {'$sort' : {'total_Dtes_Empleo_Prov' : -1} }
+])
+
+• Mostrar sólo el nombre del municipio de Huelva con mayor porcentaje de solicitudes del sector servicios del mes de marzo del 2007.
+
+db.Solicitudes.aggregate([
+    {$match : {'Provincia' : 'Huelva', Código_mes : 200703} },
+    {
+        '$group' : {
+            '_id' : '$Municipio',
+            'total_Dtes_Empleo_Municipio' : {'$sum' : '$total_Dtes_Empleo'},
+            'total_Dtes_Empleo_Municipio_Servicios' : {'$sum' : '$Dtes_Empleo_Servicios'}
+        }
+    },
+    { $project: { Municipio: 1, total_Dtes_Empleo_Municipio : 1, total_Dtes_Empleo_Municipio_Servicios : 1, 'Porcentaje': { '$divide' : [ '$total_Dtes_Empleo_Municipio_Servicios', '$total_Dtes_Empleo_Municipio' ] } } },
+    { $project: { name: 1, total_Dtes_Empleo_Municipio : 1, total_Dtes_Empleo_Municipio_Servicios : 1, 'Porcentaje': { '$multiply' : [ '$Porcentaje', 100 ] } } },
+    { $sort : { Porcentaje : -1} },
+    { $limit : 1}
+]).pretty()
